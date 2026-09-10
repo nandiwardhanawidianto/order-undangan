@@ -29,17 +29,21 @@ try {
 }
 
 $statuses = ['Orderan Masuk', 'Revisi', 'Antri Cetak', 'Proses Cetak', 'Selesai Cetak', 'Pending', 'Sudah Dikirim'];
-$types = ['Digital', 'Cetak', 'Digital + Cetak'];
+$types = ['Digital', 'Cetak'];
 $method = $_SERVER['REQUEST_METHOD'];
 $path = $_GET['path'] ?? '/orders';
 $path = '/' . trim($path, '/');
 $body = json_decode(file_get_contents('php://input'), true) ?: [];
 
+function normalizeLegacyType(?string $type): string {
+    return $type === 'Digital + Cetak' ? 'Cetak' : (string)$type;
+}
+
 function mapOrder(array $row): array {
     return [
         'id' => (int)$row['id'],
         'orderNo' => $row['order_no'],
-        'type' => $row['order_type'],
+        'type' => normalizeLegacyType($row['order_type'] ?? ''),
         'variant' => $row['variant'],
         'qty' => (int)$row['quantity'],
         'couple' => $row['couple_name'],
@@ -52,7 +56,7 @@ function mapOrder(array $row): array {
 
 function validateOrder(array $body, array $statuses, array $types): array {
     $orderNo = trim((string)($body['orderNo'] ?? ''));
-    $type = (string)($body['type'] ?? '');
+    $type = normalizeLegacyType((string)($body['type'] ?? ''));
     $variant = trim((string)($body['variant'] ?? ''));
     $qty = max(1, (int)($body['qty'] ?? 1));
     $couple = trim((string)($body['couple'] ?? ''));
